@@ -16,22 +16,29 @@ app.use(function (req, res, next) {
 const port = 2410;
 app.listen(port, () => console.log(`Node app listening on port ${port}!`));
 
-let mysql = require("mysql");
-let connData = {
-    host: "localhost",
-    user: 'root',
-    password: "",
-    database: "employee"
-};
-let connection = mysql.createConnection(connData);
-
-connection.connect((err) => {
-    if (err) {
-        console.error("Error connecting to the database:", err);
-        return;
-    }
-    console.log("Connected to the database");
+const { Client } = require("pg");
+const connection = new Client({
+    user: "postgres",
+    password: "Abhay7830928904",
+    database: "postgres",
+    port: 5432,
+    host: "db.umomdwazywxixarejixy.supabase.co",
+    ssl: { rejectUnauthorized: false },
 });
+connection.connect(function (res, error) {
+    console.log(`connected!!!`);
+});
+
+// app.get("/employees", function (req, res, next) {
+//     console.log("Inside /users get api");
+//     const query = `select * from employees`;
+//     connection.query(query, function (err, result) {
+//         if (err) {
+//             res.status(400).send(err);
+//         } else res.send(result.rows);
+//         connection.end();
+//     });
+// });
 
 // app.get("/employees", (req, res) => {
 //     connection.query("SELECT * FROM employees", (err, results) => {
@@ -45,42 +52,37 @@ connection.connect((err) => {
 // });
 
 
-app.get("/employees", (req, res) => {
+app.get("/employees", (req, res, next) => {
     const { department, designation, gender } = req.query;
-
-    // Define the base SQL query
-    let sql = "SELECT * FROM employees WHERE 1";
-
-    // Check if 'department' parameter exists and add it to the SQL query
+    let sql = `SELECT * FROM employees WHERE 1=1`;
+    const values = [];
     if (department) {
-        sql += ` AND department = '${department}'`;
+        sql += ` AND department = $1'`;
+        values.push(department);
     }
-
-    // Check if 'designation' parameter exists and add it to the SQL query
     if (designation) {
-        sql += ` AND designation = '${designation}'`;
+        sql += ` AND designation = $2`;
+        values.push(designation);
     }
-
-    // Check if 'gender' parameter exists and add it to the SQL query
     if (gender) {
-        sql += ` AND gender = '${gender}'`;
+        sql += ` AND gender = $3`;
+        values.push(gender);
     }
-
-    // Execute the query
     connection.query(sql, (err, results) => {
         if (err) {
             console.error("Error fetching employees:", err);
             res.status(500).json({ error: "Internal Server Error" });
             return;
         }
-        res.json(results);
+        res.send(results.rows);
+        connection.end();
     });
 });
 
 
-app.get("/employees/:empCode", (req, res) => {
+app.get("/employees/:empCode", (req, res, next) => {
     const { empCode } = req.params; // Removed the '+' here
-    connection.query("SELECT * FROM employees WHERE empCode = ?", [empCode], (err, results) => {
+    connection.query(`SELECT * FROM employees WHERE empCode = $1`, [empCode], (err, results) => {
         if (err) {
             console.error("Error fetching Employee by ID:", err);
             res.status(500).json({ error: "Internal Server Error" });
@@ -89,7 +91,7 @@ app.get("/employees/:empCode", (req, res) => {
         if (results.length === 0) {
             res.status(404).json({ error: "Employee not found" }); // Updated the error message
         } else {
-            res.json(results[0]);
+            res.json(results.rows[0]);
         }
     });
 });
@@ -119,10 +121,10 @@ app.get("/employees/department/:department", (req, res) => {
 });
 
 
-app.post("/employees", (req, res) => {
+app.post("/employees", (req, res, next) => {
     const { empCode, name, department, designation, salary, gender } = req.body;
     connection.query(
-        "INSERT INTO employees (empCode,name,department,designation,salary,gender) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO employees (empCode,name,department,designation,salary,gender) VALUES ($1, $2, $3, $4, $5, $6)",
         [empCode, name, department, designation, salary, gender],
         (err, results) => {
             if (err) {
@@ -130,16 +132,16 @@ app.post("/employees", (req, res) => {
                 res.status(500).json({ error: "Internal Server Error" });
                 return;
             }
-            res.status(201).json({ message: "Employee added successfully", id: results.insertId });
+            res.status(201).json({ message: "Employee added successfully", id: results.rows });
         }
     );
 });
 
-app.put("/employees/:empCode", (req, res) => {
+app.put("/employees/:empCode", (req, res, next) => {
     const { empCode } = req.params;
     const { name, department, designation, salary, gender } = req.body;
     connection.query(
-        "UPDATE employees SET name = ?, department = ?, designation = ?, salary = ?, gender = ? WHERE empCode = ?",
+        "UPDATE employees SET name = $1, department = $2, designation = $3, salary = $4, gender = $5 WHERE empCode = $6",
         [name, department, designation, salary, gender, empCode],
         (err) => {
             if (err) {
@@ -155,7 +157,7 @@ app.put("/employees/:empCode", (req, res) => {
 
 app.delete("/employees/:id", (req, res) => {
     const { id } = req.params;
-    connection.query("DELETE FROM employees WHERE empCode = ?", [id], (err) => {
+    connection.query("DELETE FROM employees WHERE empCode = $1", [id], (err) => {
         if (err) {
             console.error("Error deleting employee:", err);
             res.status(500).json({ error: "Internal Server Error" });
