@@ -68,14 +68,14 @@ app.get("/employees", (req, res, next) => {
         sql += ` AND gender = $3`;
         values.push(gender);
     }
-    connection.query(sql, (err, results) => {
+    connection.query(sql,values, (err, results) => {
         if (err) {
             console.error("Error fetching employees:", err);
             res.status(500).json({ error: "Internal Server Error" });
             return;
         }
         res.send(results.rows);
-        connection.end();
+        
     });
 });
 
