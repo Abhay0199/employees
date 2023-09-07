@@ -57,18 +57,18 @@ app.get("/employees", (req, res, next) => {
     let sql = `SELECT * FROM employees WHERE 1=1`;
     const values = [];
     if (department) {
-        sql += ` AND department = $1'`;
+        sql += ` AND department = $2`;
         values.push(department);
     }
     if (designation) {
-        sql += ` AND designation = $2`;
+        sql += ` AND designation = $3`;
         values.push(designation);
     }
     if (gender) {
-        sql += ` AND gender = $3`;
+        sql += ` AND gender = $4`;
         values.push(gender);
     }
-    connection.query(sql,values, (err, results) => {
+    connection.query(sql, values, (err, results) => {
         if (err) {
             console.error("Error fetching employees:", err);
             res.status(500).json({ error: "Internal Server Error" });
