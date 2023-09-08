@@ -34,28 +34,42 @@ connection.connect(function (res, error) {
 
 app.get("/employees", (req, res, next) => {
     const { department, designation, gender } = req.query;
-    let sql = `SELECT * FROM employees WHERE 1=1`;
+    const conditions = [];
     const values = [];
-    if (department) {
-        sql += ` AND department = $1`;
-        values.push(department);
-    }
-    if (designation) {
-        sql += ` AND designation = $1`;
-        values.push(designation);
-    }
+
     if (gender) {
-        sql += ` AND gender = $1`;
+        if (values.length > 0) {
+            conditions.push("gender = $1");
+        } else conditions.push("gender = $1");
         values.push(gender);
     }
+    if (designation) {
+        if (values.length > 0) {
+            conditions.push("designation = $2");
+        } else conditions.push("designation = $1");
+        values.push(designation);
+    }
+    if (department) {
+        if (values.length > 0) {
+            conditions.push("department = $3");
+        } else conditions.push("department = $1");
+        values.push(department);
+    }
+
+    let sql = "SELECT * FROM employees";
+
+    if (conditions.length > 0) {
+        sql += " WHERE " + conditions.join(" AND ");
+    }
+
     connection.query(sql, values, (err, results) => {
+        console.log(sql, values); // Logging SQL query and parameter values for debugging
         if (err) {
             console.error("Error fetching employees:", err);
             res.status(500).json({ error: "Internal Server Error" });
             return;
         }
         res.send(results.rows);
-        
     });
 });
 
